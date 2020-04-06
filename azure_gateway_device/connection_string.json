@@ -1,0 +1,5 @@
+{
+    "DeviceId" : "iotHub1",
+    "HostName" : "CloudGateway",
+    "connection_string" : "HostName=CloudGateway.azure-devices.net;DeviceId=iotHub1;SharedAccessKey=lDa9RJdztIpU8pPnhBgnF5ihMIeiUTgPqszt7VJqBd4="
+}
