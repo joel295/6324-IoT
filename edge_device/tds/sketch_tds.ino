@@ -1,13 +1,3 @@
-
-
- /***********Notice and Trouble shooting***************
- 1. This code is tested on Arduino Uno with Arduino IDE 1.0.5 r2 and 1.8.2.
- 2. Calibration CMD:
-     enter -> enter the calibration mode
-     cal:tds value -> calibrate with the known tds value(25^c). e.g.cal:707
-     exit -> save the parameters and exit the calibration mode
- ****************************************************/
-
 #include <EEPROM.h>
 #include "GravityTDS.h"
 
