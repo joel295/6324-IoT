@@ -6,7 +6,7 @@ float vclear = 4.50; //base voltage for clear water..
 void setup() {
   Serial.begin(9600);
   Serial.println("CLEARDATA"); //clears up any data left from previous projects
-  Serial.println("LABEL,NTU"); //always write LABEL, so excel knows the next things will be the names of the columns (instead of Acolumn you could write Time for instance)
+  Serial.println("LABEL,NTU"); //always write LABEL, so excel knows the next things will be the names of the columns 
   Serial.println("RESETTIMER"); //resets timer to 0
 
 }
@@ -21,11 +21,11 @@ void loop() {
   voltage = round_to_dp(voltage,1);
   if (voltage<1.0)
   {
-    ntu = 3000; //max NTU value, umpure water.
+    ntu = 3000; //max NTU value, unpure water.
   }
   else
   {
-    ntu = -1120.4*square(voltage)+5742.3*voltage-3152.25;
+    ntu = -1120.4*square(voltage)+5742.3*voltage-3152.25; //formula acquired through a graph and it depends on ntu = 0.0 for clear water.
   }
   Serial.println ("Sensor Output (NTU):");https://forum.arduino.cc/index.php?topic=437398.0
   Serial.println (ntu);
