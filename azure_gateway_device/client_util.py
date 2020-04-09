@@ -13,14 +13,13 @@ CONNECTION_STRING = connection_json['connection_string']
 CONNECTION_HOSTNAME = connection_json['HostName']
 CONNECTION_DEVICE = connection_json['DeviceId']
 
-MESSAGE_STRING = '{{"device": {device}, "time" : {time}, "data" : {data}}}'
-
 
 def init_client_device():
     client = IoTHubDeviceClient.create_from_connection_string(CONNECTION_STRING)
     return client
 
 # decice is device id,
+# location is location of edge device
 # time is epoch time data was collected
 # data is a json  of data from device:
 # data should be of the form:
@@ -29,8 +28,17 @@ def init_client_device():
 #  "tds"         : 'XX',
 #  "other"       : 'XX'
 # }
-def create_message(device, time, data):
-    formated_message = MESSAGE_STRING.format(device=device, time=time, data=data)
+# creates a json dictionary and dumps it into a string, passes string to azure Message()
+# ensure the message is a dictionary before applying json.dumps()
+def create_message(device, location, time, data):
+    # data is itself a  python dictionary
+    json_message = {
+        "device" : device,
+        "location" : location,
+        "time" : time,
+        "data" : data
+    }
+    formated_message = json.dumps(formated_message)
     message = Message(formated_message)
     return message
 
