@@ -28,7 +28,6 @@ void loop() {
     ntu = -1120.4*square(voltage)+5742.3*voltage-3152.25;
   }
   Serial.println ("Sensor Output (NTU):");https://forum.arduino.cc/index.php?topic=437398.0
-  //Serial.println (voltage);
   Serial.println (ntu);
   Serial.println();
   delay(1000);
