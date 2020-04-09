@@ -8,7 +8,7 @@ float temperature = 25,tdsValue = 0;
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(9800);
     gravityTds.setPin(TdsSensorPin);
     gravityTds.setAref(5.0);  //reference voltage on ADC, default 5.0V on Arduino UNO
     gravityTds.setAdcRange(1024);  //1024 for 10bit ADC;4096 for 12bit ADC
