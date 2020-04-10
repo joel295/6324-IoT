@@ -11,6 +11,7 @@ then to activate:
 $ source venv/bin/activate
 $ pip3.7 install -r requirements.txt
 to run:
-$ ./main.py
+$ ./app.py
 or 
-$ python3 main.py
+$ python3.7 app.py
+NOTE: disregard main.py it is deprecated now app.py is the main file
