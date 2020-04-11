@@ -38,7 +38,7 @@ def create_message(device, location, time, data):
         "time" : time,
         "data" : data
     }
-    formated_message = json.dumps(formated_message)
+    formated_message = json.dumps(json_message)
     message = Message(formated_message)
     return message
 
