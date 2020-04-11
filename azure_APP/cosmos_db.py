@@ -33,3 +33,16 @@ def query_for_collections(database):
         return [] # failed to authenticate
 
 # add get devices from a gateway
+
+def get_device_documents(database, collection, device_name):
+    try:
+        client = MongoClient(URI)
+        db = client[database] # select the database
+        db.authenticate(name=name, password=password)
+
+        my_collection = db[collection]
+
+        # return a list of documents where "device" = device_name
+        return [x for x in my_collection.find({"device" : device_name})]
+    except:
+        return [] # failed to authenticate

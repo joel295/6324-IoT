@@ -1,16 +1,18 @@
 
-from flask import Flask, render_template
-from cosmos_db import get_collection, query_for_collections
+from flask import Flask, render_template, request
+from cosmos_db import get_collection, query_for_collections, get_device_documents
 from dashboard import get_number_of_documents, get_unique_devices, get_device_info
+from chart_device import get_sensors, get_location, get_x_and_y_data
 
 app = Flask(__name__)
 
-@app.route('/')
-def index():
-    return render_template("index.html")
+# @app.route('/')
+# def index():
+#     return render_template("index.html")
 
 # finds the metadata of hubs, devices, and their sensors
 # displays data on the dashboard
+@app.route('/')
 @app.route('/dashboard')
 def dashboard():
     device_data = []
@@ -49,8 +51,52 @@ def dashboard():
             for s in i["sensors"]:
                 us_dashboard.append(s)
         us_dashboard = len(list(set(us_dashboard)))
-        dashboard_data = [tm_dashboard, ud_dashboard, us_dashboard, 0]
+        dashboard_data = [tm_dashboard, ud_dashboard, us_dashboard, 0] # last entry is for alerts, to be implemented later
     return render_template("dashboard.html", device_data = device_data, gateway_data = gateway_data, dashboard_data = dashboard_data)
+
+@app.route('/chart_device/<gateway>/<device>', methods=["GET", "POST"])
+def chart_device(gateway, device):
+    documents = get_device_documents("Messages", gateway, device)
+    # sort documents based on ascending epoch time before chart preparation
+    # ensures documents are in order even though the data is time series
+    documents = sorted(documents, key=lambda x: x["time"], reverse=False)
+
+    location = get_location(documents[0])
+    sensors = get_sensors(documents[0])
+    data = {}
+    for s in sensors:
+        graph_data = get_x_and_y_data(s, documents)
+        data[s] = {
+            "x_axis" : graph_data[0], # time
+            "y_axis" : graph_data[1]  # values
+        }
+
+    # thresholds is a dictionary containing two horizontal lines for epa and custom thresholds for each sensor
+    # the user if they request a threshold at y=5, they type in 5 in the corresponding threshold box for the
+    # corresponding sensor
+    # below catpures that input else the default is 0,
+    # chartjs-plugin-annotation is a plugin used to create these graph lines and can be seen in chart_device.html
+    # under the annotations in options in the script
+    thresholds = {}
+    if request.method == "POST":
+        for s in sensors:
+            try:
+                thresholds[s] = {
+                    "epa"    : request.form["epa_" + s],
+                    "custom" : request.form["custom_" + s]
+                }
+            except:
+                thresholds[s] = {
+                    "epa" : 0,
+                    "custom" : 0
+                }
+    else:
+        for s in sensors:
+            thresholds[s] = {
+                "epa" : 0,
+                "custom" : 0
+            }
+    return render_template("chart_device.html", device=device, gateway=gateway, sensors=" ".join(sensors), location=location, thresholds=thresholds, data=data)
 
 if __name__ == '__main__':
     # run the application
