@@ -7,13 +7,15 @@ from cosmos_db import get_collection, query_for_collections
 app = Flask(__name__)
 api = Api(app)
 
-# get the names of the available collections in the specified database
+# Get the names of the available collections in the specified database.
 @api.route('/api/v1/<string:database>/')
 class QueryCollections(Resource):
 
     @api.response(200, 'OK')
     @api.response(401, 'AUTHORIZATION FAILED')
     @api.response(404, 'NOT FOUND')
+    @api.param('database', 'Database')
+    @api.doc(description="Get the names of the available collections in the specified database.")
     def get(self, database):
         query = query_for_collections(database)
 
@@ -31,15 +33,18 @@ class QueryCollections(Resource):
         }
         return return_data, 200
 
-# get all documents from specified collection from specified database
-# there is one database per customer
-# a customers databse can have multiple devices each is its own collection
+# Get all documents from specified collection from specified database.
+# There is one database per customer.
+# A customers database can have multiple devices each is its own collection.
 @api.route('/api/v1/<string:database>/<string:collection>')
 class CollectAll(Resource):
 
     @api.response(200, 'OK')
     @api.response(401, 'AUTHORIZATION FAILED')
     @api.response(404, 'NOT FOUND')
+    @api.param('database', 'Database')
+    @api.param('collection', 'Collection')
+    @api.doc(description="Get all documents from specified collection from specified database.")
     def get(self, database, collection):
         my_collection = get_collection(database, collection)
 
@@ -69,6 +74,10 @@ class CollectDeviceSensor(Resource):
     @api.response(200, 'OK')
     @api.response(401, 'AUTHORIZATION FAILED')
     @api.response(404, 'NOT FOUND')
+    @api.param('database', 'Database')
+    @api.param('collection', 'Collection')
+    @api.param('field', 'Field')
+    @api.doc(description="Get a particular document from specified collection from specified database.")
     def get(self, database, collection, field):
         my_collection = get_collection(database, collection)
 
@@ -84,7 +93,7 @@ class CollectDeviceSensor(Resource):
                 "message" : "database: {} or collection: {} not found".format(database, collection)
             }, 404
 
-        # remove _id field from document, not json serialisable
+        # remove _id field from document, not JSON serialisable
         # remove all sensors except sensor specified by field
         # if field is mispelled, that document will have all sensors removed from data
         # and the header data: epoch and device will exist but data = {}
