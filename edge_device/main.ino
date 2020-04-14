@@ -9,7 +9,7 @@
 const int SENSOR_PIN = 13; // Arduino pin connected to DS18B20 sensor's DQ pin
 
 OneWire oneWire(SENSOR_PIN);    
-
+GravityTDS gravityTds;
 DallasTemperature sensors(&oneWire);
 
 float Celcius=0;
