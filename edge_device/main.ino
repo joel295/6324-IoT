@@ -7,7 +7,7 @@
 #define TdsSensorPin A1
 
 const int SENSOR_PIN = 13; // Arduino pin connected to DS18B20 sensor's DQ pin
-float temperature = 25,tdsValue = 0;
+float tdsValue = 0;
 OneWire oneWire(SENSOR_PIN);    
 GravityTDS gravityTds;
 DallasTemperature sensors(&oneWire);
@@ -26,7 +26,9 @@ void setup() {
   //initialization
   gravityTds.begin();
   sensors.begin();
-  
+  Serial.print("Temperature(C), ");
+  Serial.print("Turbidity(ntu), ");
+  Serial.println("TDS(ppm)");
 
   // put your setup code here, to run once:
 
@@ -40,6 +42,7 @@ void loop() {
   Celcius=sensors.getTempCByIndex(0);
 
   Serial.print(Celcius);
+  Serial.print(", ");
 
 
   // turbidity
@@ -60,14 +63,16 @@ void loop() {
     ntu = -1120.4*square(voltage)+5742.3*voltage-3152.25;
   }
   Serial.print(ntu);
+  Serial.print(", ");
 
   //tds
 
   gravityTds.setTemperature(Celcius);  // set the temperature and execute temperature compensation
   gravityTds.update();  //sample and calculate
   tdsValue = gravityTds.getTdsValue();  // then get the value
-  Serial.print(tdsValue,0);
-  Serial.println("ppm");
+  Serial.println(tdsValue,0);
+  
+  delay(2000);
 }
 
 
