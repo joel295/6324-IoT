@@ -7,17 +7,14 @@
 #define TdsSensorPin A1
 
 const int SENSOR_PIN = 13; // Arduino pin connected to DS18B20 sensor's DQ pin
-
+float temperature = 25,tdsValue = 0;
 OneWire oneWire(SENSOR_PIN);    
 GravityTDS gravityTds;
 DallasTemperature sensors(&oneWire);
-
 float Celcius=0;
-
 float ntu;
 float voltage;
 float vclear = 4.50; //base voltage for clear water..
-
 
 void setup() {
 
@@ -71,15 +68,8 @@ void loop() {
   tdsValue = gravityTds.getTdsValue();  // then get the value
   Serial.print(tdsValue,0);
   Serial.println("ppm");
-
-
-
-
-
-
-
-
 }
+
 
 float round_to_dp(float in_value, int decimal_place)
 {
