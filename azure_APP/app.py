@@ -1,28 +1,118 @@
 
-from flask import Flask, render_template, request
-from cosmos_db import get_collection, query_for_collections, get_device_documents
+from flask import Flask, render_template, redirect, url_for, request
+from flask_bootstrap import Bootstrap
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField
+from wtforms.validators import InputRequired, Email, Length
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+
+from cosmos_db import get_collection, query_for_collections, get_device_documents, query_user_data, write_new_user, get_relevent_alert_path_strings, write_alert_to_db, get_alert_data
 from dashboard import get_number_of_documents, get_unique_devices, get_device_info
 from chart_device import get_sensors, get_location, get_x_and_y_data
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'Thisissupposedtobesecret!'
+bootstrap = Bootstrap(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
-# @app.route('/')
-# def index():
-#     return render_template("index.html")
+
+class User(UserMixin):
+    def __init__(self, id, username, email, password):
+        self.id = id
+        self.username = username
+        self.email = email
+        self.password = password
+
+# given id find user
+# must return None if ID is not accepted
+@login_manager.user_loader
+def load_user(user_id):
+    #find user with username in db
+    # initialize a User object from the data from
+    query = {"_id" : ObjectId(user_id)}
+    user = query_user_data(query)
+    if user == None:
+        print("loading user: failed returning None")
+        return None
+    return User(str(user['_id']), user['username'], user['email'], user['password'])
+
+class LoginForm(FlaskForm):
+    username = StringField('username', validators=[InputRequired(), Length(min=4, max=15)])
+    password = PasswordField('password', validators=[InputRequired(), Length(min=8, max=80)])
+    remember = BooleanField('remember me')
+
+class RegisterForm(FlaskForm):
+    email = StringField('email', validators=[InputRequired(), Email(message='Invalid email'), Length(max=50)])
+    username = StringField('username', validators=[InputRequired(), Length(min=4, max=15)])
+    password = PasswordField('password', validators=[InputRequired(), Length(min=8, max=80)])
+
+@app.route('/')
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        # go to https://stackoverflow.com/questions/54992412/flask-login-usermixin-class-with-a-mongodb
+        # get user from database given Username
+        # initialise class using details from ser
+        # username: form.username.data
+        query = {"username" : form.username.data}
+        potential_user = query_user_data(query)
+        if potential_user != None:
+            user = User(str(potential_user['_id']), potential_user['username'], potential_user['email'], potential_user['password'])
+            if check_password_hash(user.password, form.password.data):
+                login_user(user, remember=form.remember.data)
+                return redirect(url_for('dashboard'))
+    return render_template('login.html', form=form)
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    form = RegisterForm()
+
+    if form.validate_on_submit():
+        hashed_password = generate_password_hash(form.password.data, method='sha256')
+        new_user = {
+            "username" : form.username.data,
+            "email"    : form.email.data,
+            "password" : hashed_password,
+            "alerts" : [] # maintains the user defined sensor alerts
+        }
+        #NOTE check if fails when two users exist with the same username
+        #NOTE if the fail does not occur, check if the username exists and or email within databse before adding new user
+        status = write_new_user(new_user)
+        if status:
+            return redirect(url_for('login'))
+
+    return render_template('signup.html', form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 
 # finds the metadata of hubs, devices, and their sensors
 # displays data on the dashboard
-@app.route('/')
 @app.route('/dashboard')
+@login_required
 def dashboard():
     device_data = []
     gateway_data = []
     tm_dashboard = 0
     ud_dashboard = 0
     us_dashboard = []
+    al_dashboard = 0 # count of total triggered alerts
     database = "Messages"
     collections = query_for_collections(database)
-
+    alert_data_list = get_alert_data(current_user.username) # alert data of form [alert_data, sum_of_triggered_alerts]
+    alert_data = alert_data_list[0]
+    al_dashboard = alert_data_list[1]
+    
     for collection in collections:
         documents = get_collection(database, collection)
         g_data = []
@@ -51,10 +141,11 @@ def dashboard():
             for s in i["sensors"]:
                 us_dashboard.append(s)
         us_dashboard = len(list(set(us_dashboard)))
-        dashboard_data = [tm_dashboard, ud_dashboard, us_dashboard, 0] # last entry is for alerts, to be implemented later
-    return render_template("dashboard.html", device_data = device_data, gateway_data = gateway_data, dashboard_data = dashboard_data)
+        dashboard_data = [tm_dashboard, ud_dashboard, us_dashboard, al_dashboard] # last entry is for alerts, to be implemented later
+    return render_template("dashboard.html", device_data = device_data, gateway_data = gateway_data, dashboard_data = dashboard_data, alert_data=alert_data)
 
 @app.route('/chart_device/<gateway>/<device>', methods=["GET", "POST"])
+@login_required
 def chart_device(gateway, device):
     documents = get_device_documents("Messages", gateway, device)
     # sort documents based on ascending epoch time before chart preparation
@@ -78,24 +169,52 @@ def chart_device(gateway, device):
     # chartjs-plugin-annotation is a plugin used to create these graph lines and can be seen in chart_device.html
     # under the annotations in options in the script
     thresholds = {}
+
+    # get alert thresholds and put them into the threshold structure
+    thresholds = get_relevent_alert_path_strings(current_user.username, gateway, device, sensors)
+    # remove a sensor from alerts if theywhere removed from device after last POST
+    for key in thresholds:
+        if not key in sensors:
+            del thresholds[key]
+
     if request.method == "POST":
         for s in sensors:
+            #add POSTed data to thresholds, so users can view it in template
             try:
-                thresholds[s] = {
-                    "epa"    : request.form["epa_" + s],
-                    "custom" : request.form["custom_" + s]
-                }
+                value = request.form["warning_value_" + s]
+                trigger = request.form["warning_trigger_" + s]
+                # if value and trigger exist, overwrite alert thresholds with the POSTed values
+                if value and trigger:
+                    thresholds[s]['warning'] = {
+                        "value" : value,
+                        "trigger" : trigger
+                    }
+                # write new POST alert string into datbase
+                # string in database has the following structure:
+                # "hub/device/sensor/(warning|danger)/value/(above/below/line)"
+                # only write alert if not default '0/line'
+                if not str(value) + '/' + trigger == '0/line':
+                    alert_string = gateway + '/' + device + '/' + s + '/' + 'warning' + '/' + str(value) + '/' + trigger
+                    if not write_alert_to_db(current_user.username, alert_string):
+                        print("FAILED TO WRITE ALERT")
             except:
-                thresholds[s] = {
-                    "epa" : 0,
-                    "custom" : 0
-                }
-    else:
-        for s in sensors:
-            thresholds[s] = {
-                "epa" : 0,
-                "custom" : 0
-            }
+                pass # the dictionary with no meaningful data initialised in get_relevent_alert_path_strings
+            try:
+                value = request.form["danger_value_" + s]
+                trigger = request.form["danger_trigger_" + s]
+                # if value and trigger exist, overwrite alert thresholds with the POSTed values
+                if value and trigger:
+                    thresholds[s]['danger'] = {
+                        "value" : value,
+                        "trigger" : trigger
+                    }
+                if not str(value) + '/' + trigger == '0/line':
+                    alert_string = gateway + '/' + device + '/' + s + '/' + 'danger' + '/' + str(value) + '/' + trigger
+                    if not write_alert_to_db(current_user.username, alert_string):
+                        print("FAILED TO WRITE ALERT")
+            except:
+                pass # the dictionary with no meaningful data initialised in get_relevent_alert_path_strings
+
     return render_template("chart_device.html", device=device, gateway=gateway, sensors=" ".join(sensors), location=location, thresholds=thresholds, data=data)
 
 if __name__ == '__main__':
