@@ -12,13 +12,12 @@ OneWire oneWire(SENSOR_PIN);
 GravityTDS gravityTds;
 DallasTemperature sensors(&oneWire);
 float Celcius=0;
+float temperature=25;
 float ntu;
 float voltage;
 float vclear = 4.50; //base voltage for clear water..
 
-void setup() {
-
-
+void setup() { 
   Serial.begin(9600);
   gravityTds.setPin(TdsSensorPin);
   gravityTds.setAref(5.0);  //reference voltage on ADC, default 5.0V on Arduino UNO
@@ -26,8 +25,12 @@ void setup() {
   //initialization
   gravityTds.begin();
   sensors.begin();
-  Serial.print("Temperature(C), ");
-  Serial.print("Turbidity(ntu), ");
+  Serial.print("Date ");
+  Serial.print("Time ");
+  Serial.print("Device_name ");
+  Serial.print("Location ");
+  Serial.print("Temperature(C) ");
+  Serial.print("Turbidity(ntu) ");
   Serial.println("TDS(ppm)");
 
   // put your setup code here, to run once:
@@ -36,13 +39,19 @@ void setup() {
 
 void loop() {
 
+
+  
+  
   //Temperature
 
   sensors.requestTemperatures(); 
   Celcius=sensors.getTempCByIndex(0);
+  
+  Serial.print("Antibiotic_device ");
+  Serial.print("Discharge_point_1 ");
 
   Serial.print(Celcius);
-  Serial.print(", ");
+  Serial.print(" ");
 
 
   // turbidity
@@ -52,8 +61,10 @@ void loop() {
       int sensorValue = analogRead(A2);
       voltage += sensorValue * (5.0 / 1024.0);
   }
+  //voltage = (voltage/(800*3.3))*(4.2);
   voltage = voltage/800;
   voltage = round_to_dp(voltage,1);
+  voltage = voltage+0.4; //correction for drinking water
   if (voltage<1.0)
   {
     ntu = 3000; //max NTU value, umpure water.
@@ -63,16 +74,17 @@ void loop() {
     ntu = -1120.4*square(voltage)+5742.3*voltage-3152.25;
   }
   Serial.print(ntu);
-  Serial.print(", ");
+  Serial.print(" ");
 
   //tds
 
-  gravityTds.setTemperature(Celcius);  // set the temperature and execute temperature compensation
+  gravityTds.setTemperature(temperature);  // set the temperature and execute temperature compensation
   gravityTds.update();  //sample and calculate
-  tdsValue = gravityTds.getTdsValue();  // then get the value
+  tdsValue = gravityTds.getTdsValue(); // then get the value
+  
   Serial.println(tdsValue,0);
   
-  delay(2000);
+  delay(1000);
 }
 
 
