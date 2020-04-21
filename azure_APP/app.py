@@ -112,7 +112,7 @@ def dashboard():
     alert_data_list = get_alert_data(current_user.username) # alert data of form [alert_data, sum_of_triggered_alerts]
     alert_data = alert_data_list[0]
     al_dashboard = alert_data_list[1]
-    
+
     for collection in collections:
         documents = get_collection(database, collection)
         g_data = []
@@ -142,7 +142,7 @@ def dashboard():
                 us_dashboard.append(s)
         us_dashboard = len(list(set(us_dashboard)))
         dashboard_data = [tm_dashboard, ud_dashboard, us_dashboard, al_dashboard] # last entry is for alerts, to be implemented later
-    return render_template("dashboard.html", device_data = device_data, gateway_data = gateway_data, dashboard_data = dashboard_data, alert_data=alert_data)
+    return render_template("dashboard.html", device_data = device_data, gateway_data = gateway_data, dashboard_data = dashboard_data, alert_data=alert_data, username = current_user.username)
 
 @app.route('/chart_device/<gateway>/<device>', methods=["GET", "POST"])
 @login_required
@@ -193,7 +193,7 @@ def chart_device(gateway, device):
                 # string in database has the following structure:
                 # "hub/device/sensor/(warning|danger)/value/(above/below/line)"
                 # only write alert if not default '0/line'
-                if not str(value) + '/' + trigger == '0/line':
+                if not '/' + trigger == '/line':
                     alert_string = gateway + '/' + device + '/' + s + '/' + 'warning' + '/' + str(value) + '/' + trigger
                     if not write_alert_to_db(current_user.username, alert_string):
                         print("FAILED TO WRITE ALERT")
@@ -208,14 +208,14 @@ def chart_device(gateway, device):
                         "value" : value,
                         "trigger" : trigger
                     }
-                if not str(value) + '/' + trigger == '0/line':
+                if not '/' + trigger == '/line':
                     alert_string = gateway + '/' + device + '/' + s + '/' + 'danger' + '/' + str(value) + '/' + trigger
                     if not write_alert_to_db(current_user.username, alert_string):
                         print("FAILED TO WRITE ALERT")
             except:
                 pass # the dictionary with no meaningful data initialised in get_relevent_alert_path_strings
 
-    return render_template("chart_device.html", device=device, gateway=gateway, sensors=" ".join(sensors), location=location, thresholds=thresholds, data=data)
+    return render_template("chart_device.html", device=device, gateway=gateway, sensors=" ".join(sensors), location=location, thresholds=thresholds, data=data, username = current_user.username)
 
 if __name__ == '__main__':
     # run the application

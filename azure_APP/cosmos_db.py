@@ -133,7 +133,7 @@ def get_relevent_alert_path_strings(username, hub, device, sensors):
         # print(a_split[0] + " " + a_split[1])
         if a_split[0] == hub and a_split[1] == device:
             final_alerts[a_split[2]][a_split[3]] = {
-                "value"  : float(a_split[4]),
+                "value"  : int(a_split[4]),
                 "trigger": a_split[5]
             }
     #print(final_alerts)
@@ -149,6 +149,7 @@ def write_alert_to_db(username, new_alert):
         return None # failed to get user
     # retrieve alerts
     alerts = user['alerts']
+    do_not_write_flag = False
     if alerts:
         nabp = new_alert.split('/')
         new_alert_base_path = nabp[0] + '/' + nabp[1] + '/' + nabp[2] + '/' + nabp[3] + '/'
@@ -162,6 +163,10 @@ def write_alert_to_db(username, new_alert):
             for key in a.keys():
                 alert_string = key
 
+            # check if new_alert and alert_string (current alert string) are the same, if so don't write to db
+            if new_alert == alert_string:
+                do_not_write_flag = True
+                break
 
             oabp = alert_string.split('/')
             old_alert_base_path = oabp[0] + '/' + oabp[1] + '/' + oabp[2] + '/' + oabp[3] + '/'
@@ -171,7 +176,7 @@ def write_alert_to_db(username, new_alert):
                 break
                 # after finding a (alert string to replace), remove it from alert list, recall flag holds a
         # remove old alert  and its epoch list from alerts
-        if {old_alert_string : epoch_list} in alerts:
+        if {old_alert_string : epoch_list} in alerts and not do_not_write_flag:
             alerts.remove({old_alert_string : epoch_list})
         # add new replacement alert to alerts but keep the old alerts epoch list
         alerts.append({new_alert : epoch_list})
@@ -179,14 +184,15 @@ def write_alert_to_db(username, new_alert):
         # if no old alert that matches this alert add it as a new alert with epock list empty: []
         alerts.append({new_alert : []})
     #try:
-    client = MongoClient(URI)
-    db = client["Access"] # select the database
-    db.authenticate(name=name, password=password)
+    if not do_not_write_flag:
+        client = MongoClient(URI)
+        db = client["Access"] # select the database
+        db.authenticate(name=name, password=password)
 
-    my_collection = db["Users"]
-    x = my_collection.update(query, {"$set" : {"alerts": alerts} })
-    if not x:
-        return None
+        my_collection = db["Users"]
+        x = my_collection.update(query, {"$set" : {"alerts": alerts} })
+        if not x:
+            return None
     # except:
     #     return None # failed to authenticate or no users found
     return True
@@ -201,7 +207,6 @@ def get_alert_data(username):
         return [[], 0] # failed to get user
     # retrieve alerts
     alerts = user['alerts']
-    print(alerts)
     alert_data = [] # final result to be returned by this function
     alert_number = 0 # for the dashboard Alerts icon, a sum of all alerts that have been triggered across all user alerts
     for alert in alerts:
