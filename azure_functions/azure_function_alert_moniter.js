@@ -12,8 +12,8 @@ module.exports = async function (context, IoTHubMessages) {
             ciphers:'SSLv3'
         },
         auth: {
-            user: 'antibiotic6324@outlook.com',
-            pass: 'COMP6324Sucks'
+            user: '',
+            pass: ''
         }
     });
 
