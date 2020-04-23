@@ -2,10 +2,10 @@
 * Deploy via local git file
 * Ensure the main file is named app.py
 * and you send of dependencies and requirements.txt on first push in the folder:
-```
-$ git init //only done initially
-$ git add <files here> //adds to staging area
-$ git commit -m "message" //commits changes
-$ git push --set-upstream <url.git> master
-```
+  ```
+  $ git init //only done initially
+  $ git add <files here> //adds to staging area
+  $ git commit -m "message" //commits changes
+  $ git push --set-upstream <url.git> master
+  ```
 * you will then be asked for credentials
