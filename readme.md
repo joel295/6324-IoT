@@ -16,6 +16,7 @@ Our vision is to simplify the wastewater management process in order to drive su
 Each subfolder contains necessary readme's for ease of use.
 
 ## Repository Layout
+```bash
 .
 ├── azure_API
 ├── azure_APP
@@ -30,7 +31,7 @@ Each subfolder contains necessary readme's for ease of use.
     │   └── sketch_temp
     └── turbidity
         └── sketch_tur
-
+```
 ## Built With
 * Python3
 * C
